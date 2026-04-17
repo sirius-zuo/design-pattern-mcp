@@ -34,15 +34,20 @@ describe('integration: real templates directory', () => {
 
   it('Strategy+Go response is under 2400 characters (~600 tokens)', () => {
     const { template, warning } = getTemplate('Strategy', 'go', patternIndex);
-    const text = [
-      `Pattern: ${template!.pattern}`, `Language: ${template!.language}`,
+    // Mirrors formatTemplate in src/index.ts: parts joined with '\n', blank strings create blank lines
+    const parts = [
+      `Pattern: ${template!.pattern}`,
+      `Language: ${template!.language}`,
+      '',
       `COMPONENTS:\n${template!.components}`,
+      '',
       `CONSTRAINTS:\n${template!.constraints}`,
+      '',
       `ANTI-PATTERNS:\n${template!.antiPatterns}`,
-      template!.languageNotes ? `GO-SPECIFIC NOTES:\n${template!.languageNotes}` : '',
-      template!.exampleStructure ? `EXAMPLE STRUCTURE:\n${template!.exampleStructure}` : '',
-      warning ? `NOTE: ${warning}` : '',
-    ].filter(Boolean).join('\n\n');
-    expect(text.length).toBeLessThan(2400);
+    ];
+    if (template!.languageNotes) parts.push('', `${template!.language.toUpperCase()}-SPECIFIC NOTES:\n${template!.languageNotes}`);
+    if (template!.exampleStructure) parts.push('', `EXAMPLE STRUCTURE:\n${template!.exampleStructure}`);
+    if (warning) parts.push('', `NOTE: ${warning}`);
+    expect(parts.join('\n').length).toBeLessThan(2400);
   });
 });

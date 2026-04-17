@@ -5,11 +5,11 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprot
 import { loadTemplates } from './loader';
 import { getTemplate } from './tools/get-template';
 import { suggestPattern } from './tools/suggest';
-import { PatternTemplate } from './types';
+import type { PatternTemplate } from './types';
 
 const TEMPLATES_DIR = path.join(__dirname, '..', 'templates');
 
-function formatTemplate(t: PatternTemplate, warning?: string): string {
+export function formatTemplate(t: PatternTemplate, warning?: string): string {
   const parts = [
     `Pattern: ${t.pattern}`,
     `Language: ${t.language}`,
@@ -34,6 +34,10 @@ function formatTemplate(t: PatternTemplate, warning?: string): string {
 
 async function main(): Promise<void> {
   const { patternIndex } = loadTemplates(TEMPLATES_DIR);
+
+  if (patternIndex.size === 0) {
+    process.stderr.write(`[design-pattern-mcp] WARNING: no templates loaded from ${TEMPLATES_DIR}\n`);
+  }
 
   const server = new Server(
     { name: 'design-pattern-templates', version: '1.0.0' },
@@ -83,7 +87,8 @@ async function main(): Promise<void> {
   }));
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const { name, arguments: args } = request.params;
+    const { name } = request.params;
+    const args = request.params.arguments ?? {};
 
     if (name === 'suggest_pattern') {
       const { description, category } = args as { description: string; category?: string };
