@@ -5,6 +5,7 @@ import matter from 'gray-matter';
 import { PatternEntry, PatternFrontmatter, LanguageSection, LoadResult } from './types';
 
 const LANG_HEADING: Record<string, string> = {
+  generic: 'Generic',
   go: 'Go',
   java: 'Java',
   python: 'Python',

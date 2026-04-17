@@ -80,7 +80,8 @@ describe('loadTemplates', () => {
 
   it('builds keyword index from triggers', () => {
     const { keywordIndex } = loadTemplates(tmpDir);
-    expect(keywordIndex.size).toBeGreaterThan(0);
+    expect(keywordIndex.get('test trigger phrase')).toContain('TestPattern');
+    expect(keywordIndex.get('another trigger')).toContain('TestPattern');
   });
 
   it('parses Go language section notes', () => {
