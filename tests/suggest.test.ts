@@ -59,6 +59,7 @@ describe('suggestPattern', () => {
   it('returns all patterns in category when no match and category is provided', () => {
     const results = suggestPattern('xyzzy quux blorg', 'creational', patternIndex);
     expect(results.every(r => r.category === 'creational')).toBe(true);
+    expect(results.every(r => r.confidence === 0)).toBe(true);
   });
 
   it('includes rationale drawn from first trigger phrase', () => {

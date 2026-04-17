@@ -22,12 +22,14 @@ export function suggestPattern(
 ): PatternSuggestion[] {
   const descTokens = tokenize(description);
   const scores = new Map<string, number>();
+  const nameToEntry = new Map<string, PatternEntry>();
 
   for (const [, entry] of patternIndex) {
     const name = entry.frontmatter.name;
     if (scores.has(name)) continue; // skip alias duplicates
     if (category && entry.frontmatter.category !== (category as PatternCategory)) continue;
     scores.set(name, scoreEntry(descTokens, entry.frontmatter.triggers));
+    nameToEntry.set(name, entry);
   }
 
   const sorted = [...scores.entries()]
@@ -39,9 +41,11 @@ export function suggestPattern(
   if (topScore < 0.3) {
     if (category) {
       const fallback: PatternSuggestion[] = [];
+      const seen = new Set<string>();
       for (const [, entry] of patternIndex) {
         if (entry.frontmatter.category !== (category as PatternCategory)) continue;
-        if (fallback.some(f => f.name === entry.frontmatter.name)) continue;
+        if (seen.has(entry.frontmatter.name)) continue;
+        seen.add(entry.frontmatter.name);
         fallback.push({
           name: entry.frontmatter.name,
           category: entry.frontmatter.category,
@@ -60,14 +64,14 @@ export function suggestPattern(
     const summary = [...counts.entries()].map(([c, n]) => `${c}: ${n}`).join(', ');
     return [{
       name: '__no_match__',
-      category: 'none',
+      category: '',
       rationale: `No confident match. Patterns by category: ${summary}. Retry with a category parameter to narrow results.`,
       confidence: 0,
     }];
   }
 
   return sorted.slice(0, 3).map(([name, score]) => {
-    const entry = [...patternIndex.values()].find(e => e.frontmatter.name === name)!;
+    const entry = nameToEntry.get(name)!;
     return {
       name: entry.frontmatter.name,
       category: entry.frontmatter.category,
