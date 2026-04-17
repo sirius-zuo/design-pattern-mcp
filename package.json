@@ -21,8 +21,10 @@
     "typescript": "^5.4.0"
   },
   "jest": {
-    "preset": "ts-jest",
     "testEnvironment": "node",
-    "roots": ["<rootDir>/tests"]
+    "roots": ["<rootDir>/tests"],
+    "transform": {
+      "^.+\\.tsx?$": ["ts-jest", { "tsconfig": "tsconfig.test.json" }]
+    }
   }
 }
