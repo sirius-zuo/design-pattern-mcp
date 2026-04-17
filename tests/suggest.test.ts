@@ -44,7 +44,8 @@ describe('suggestPattern', () => {
 
   it('filters by category when provided', () => {
     const results = suggestPattern('create objects', 'creational', patternIndex);
-    results.filter(r => r.name !== '__no_match__').forEach(r => {
+    expect(results.length).toBeGreaterThan(0);
+    results.forEach(r => {
       expect(r.category).toBe('creational');
     });
   });
@@ -65,5 +66,14 @@ describe('suggestPattern', () => {
   it('includes rationale drawn from first trigger phrase', () => {
     const results = suggestPattern('multiple interchangeable algorithms', undefined, patternIndex);
     expect(results[0].rationale).toBeTruthy();
+  });
+
+  it('does not duplicate entries when alias and canonical name share the same frontmatter.name', () => {
+    const index = new Map([
+      ['strategy', makeEntry('Strategy', 'behavioral', ['interchangeable algorithms'])],
+      ['policy',   makeEntry('Strategy', 'behavioral', ['interchangeable algorithms'])], // alias
+    ]);
+    const results = suggestPattern('interchangeable algorithms', undefined, index);
+    expect(results.filter(r => r.name === 'Strategy').length).toBe(1);
   });
 });

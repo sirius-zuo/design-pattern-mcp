@@ -4,6 +4,8 @@ function tokenize(text: string): string[] {
   return text.toLowerCase().split(/\W+/).filter(w => w.length > 2);
 }
 
+// Returns an unbounded sum in [0..N] where N = number of trigger phrases.
+// Each trigger contributes matched_tokens/trigger_tokens (0..1) to the total.
 function scoreEntry(descTokens: string[], triggers: string[]): number {
   let score = 0;
   for (const trigger of triggers) {
@@ -38,6 +40,8 @@ export function suggestPattern(
 
   const topScore = sorted[0]?.[1] ?? 0;
 
+  // topScore is the unbounded sum from scoreEntry; 0.3 means at least 30% of
+  // one trigger phrase's tokens matched (or a partial match across several triggers).
   if (topScore < 0.3) {
     if (category) {
       const fallback: PatternSuggestion[] = [];
