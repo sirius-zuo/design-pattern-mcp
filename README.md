@@ -18,7 +18,7 @@ Map a problem description to pattern name(s).
 ### `get_template`
 Get structural constraints and anti-patterns for a specific pattern in a specific language.
 
-**Input:** `{ pattern: string, language: "go"|"java"|"python"|"rust"|"generic" }`
+**Input:** `{ pattern: string, language: "go"|"java"|"python"|"rust"|"typescript"|"generic" }`
 
 **Output:** Compact plain text with COMPONENTS, CONSTRAINTS, ANTI-PATTERNS, language-specific notes, example structure
 
