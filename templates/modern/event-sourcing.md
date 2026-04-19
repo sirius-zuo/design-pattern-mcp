@@ -1,7 +1,7 @@
 ---
 name: Event Sourcing
 category: modern
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - full history of state changes required
   - audit log is business-critical
@@ -212,5 +212,35 @@ impl Order {
         for e in events { o.apply(e); }
         o
     }
+}
+```
+
+## TypeScript
+
+### Notes
+- Discriminated union event types: `type OrderEvent = OrderPlaced | OrderShipped | OrderCancelled` — switch exhaustiveness is automatic.
+- `readonly` event fields prevent mutation after creation; `as const` for event type string literals.
+- Aggregate state rebuilt by replaying a `DomainEvent[]` array through an `apply(event: DomainEvent)` method.
+- `eventstore-client` for EventStoreDB; custom `events` table in PostgreSQL; snapshots for large event streams.
+
+### Example Structure
+```typescript
+type OrderEvent =
+  | { type: 'OrderPlaced';    orderId: string; items: Item[];      occurredAt: Date }
+  | { type: 'OrderShipped';   orderId: string; trackingNo: string; occurredAt: Date }
+  | { type: 'OrderCancelled'; orderId: string; reason: string;     occurredAt: Date };
+
+type OrderState = { status: 'new' | 'placed' | 'shipped' | 'cancelled'; items: Item[] };
+
+function applyEvent(state: OrderState, event: OrderEvent): OrderState {
+  switch (event.type) {
+    case 'OrderPlaced':    return { ...state, status: 'placed', items: event.items };
+    case 'OrderShipped':   return { ...state, status: 'shipped' };
+    case 'OrderCancelled': return { ...state, status: 'cancelled' };
+  }
+}
+
+function rehydrate(events: OrderEvent[]): OrderState {
+  return events.reduce(applyEvent, { status: 'new', items: [] });
 }
 ```

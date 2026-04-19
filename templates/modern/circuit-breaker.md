@@ -1,7 +1,7 @@
 ---
 name: Circuit Breaker
 category: modern
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - external service calls can fail or slow
   - cascading failure prevention
@@ -198,4 +198,36 @@ impl CircuitBreaker {
         todo!()
     }
 }
+```
+
+## TypeScript
+
+### Notes
+- `opossum` is the standard Node.js circuit breaker library — wraps any `async` function, no custom state machine needed.
+- Manual implementation: closure state (`let state: 'closed' | 'open' | 'half-open'`) + an `async` wrapper function.
+- `opossum` fires typed events: `'open'`, `'close'`, `'halfOpen'`, `'fallback'` — wire these to metrics/alerting.
+- Combine with retry: the circuit breaker wraps the retry-wrapped function, not individual retry attempts.
+
+### Example Structure
+```typescript
+import CircuitBreaker from 'opossum';
+
+async function callPaymentService(orderId: string): Promise<PaymentResult> {
+  const resp = await fetch(`https://payment-service/pay/${orderId}`, { method: 'POST' });
+  if (!resp.ok) throw new Error(`Payment failed: ${resp.status}`);
+  return resp.json() as Promise<PaymentResult>;
+}
+
+const breaker = new CircuitBreaker(callPaymentService, {
+  timeout:                  3000,  // fail after 3 s
+  errorThresholdPercentage: 50,    // open after 50% errors
+  resetTimeout:             30000, // retry after 30 s
+});
+
+breaker.fallback(() => ({ status: 'pending', message: 'Payment service unavailable' }));
+breaker.on('open',     () => console.warn('Payment circuit OPEN'));
+breaker.on('halfOpen', () => console.info('Payment circuit HALF-OPEN — testing'));
+breaker.on('close',    () => console.info('Payment circuit CLOSED — recovered'));
+
+export const processPayment = (orderId: string) => breaker.fire(orderId);
 ```

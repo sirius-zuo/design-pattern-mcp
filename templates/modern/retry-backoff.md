@@ -1,7 +1,7 @@
 ---
 name: Retry with Backoff
 category: modern
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - transient failures in network calls
   - idempotent operations that may fail temporarily
@@ -182,4 +182,42 @@ where
     }
     unreachable!()
 }
+```
+
+## TypeScript
+
+### Notes
+- Pure `async`/`await` with a `for` loop and `setTimeout` promise is idiomatic for basic retry — no extra library needed.
+- `p-retry` npm package for production retry with configurable strategies, typed errors, and abort signals.
+- Exponential backoff: `delay = baseMs * 2 ** (attempt - 1)` with optional jitter `+ Math.random() * baseMs`.
+- Typed error filtering: `if (!(err instanceof RetryableError)) throw err` to only retry transient failures.
+
+### Example Structure
+```typescript
+class RetryableError extends Error {}
+
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  options: { maxAttempts?: number; baseDelayMs?: number } = {},
+): Promise<T> {
+  const { maxAttempts = 3, baseDelayMs = 100 } = options;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (!(err instanceof RetryableError)) throw err;
+      if (attempt === maxAttempts) throw err;
+      const delay = baseDelayMs * 2 ** (attempt - 1) + Math.random() * baseDelayMs;
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  throw new Error('unreachable');
+}
+
+// Usage
+const data = await withRetry(
+  () => fetch('https://api.example.com/data').then(r => r.json()),
+  { maxAttempts: 4, baseDelayMs: 200 },
+);
 ```

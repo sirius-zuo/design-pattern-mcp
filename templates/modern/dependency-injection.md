@@ -2,7 +2,7 @@
 name: Dependency Injection
 category: modern
 aliases: [DI]
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - decouple components from dependency creation
   - hard to test because new Dependency inside logic
@@ -169,4 +169,45 @@ impl UserService {
 // Composition root (main.rs)
 // let smtp = Arc::new(SmtpEmailService::new("smtp.example.com"));
 // let svc  = UserService::new(smtp);
+```
+
+## TypeScript
+
+### Notes
+- NestJS `@Injectable()` + constructor injection is the standard for TypeScript server apps; the DI container manages lifetimes.
+- InversifyJS for non-framework DI — `@injectable()` + `@inject(TOKEN)` decorators; requires `reflect-metadata`.
+- Constructor injection is preferred over property injection for testability and explicit dependency declaration.
+- `tsyringe` (Microsoft, lightweight) for TypeScript DI without a full framework.
+
+### Example Structure
+```typescript
+// NestJS (most common for TypeScript servers)
+@Injectable()
+class UserRepository {
+  constructor(@InjectRepository(UserEntity) private repo: Repository<UserEntity>) {}
+  async findById(id: string): Promise<UserEntity | null> { return this.repo.findOneBy({ id }); }
+}
+
+@Injectable()
+class UserService {
+  constructor(
+    private readonly userRepo: UserRepository,
+    private readonly mailer: MailService,
+  ) {}
+
+  async register(dto: RegisterDto): Promise<UserEntity> {
+    const user = this.userRepo.create(dto);
+    await this.userRepo.save(user);
+    await this.mailer.sendWelcome(user.email);
+    return user;
+  }
+}
+
+// Framework-agnostic constructor injection (no decorators)
+class OrderService {
+  constructor(
+    private readonly orderRepo: OrderRepository,      // interface, not class
+    private readonly paymentGateway: PaymentGateway,  // interface, not class
+  ) {}
+}
 ```

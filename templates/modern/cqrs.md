@@ -2,7 +2,7 @@
 name: CQRS
 category: modern
 aliases: [Command Query Responsibility Segregation]
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - read and write workloads have different scaling needs
   - complex domain writes with many simple read views
@@ -196,4 +196,44 @@ pub trait QueryHandler<Q> {
 }
 
 pub struct OrderSummaryDto { pub id: Uuid, pub status: String }
+```
+
+## TypeScript
+
+### Notes
+- Separate `Command` and `Query` type hierarchies with discriminated unions; one handler class per operation.
+- NestJS CQRS module (`@nestjs/cqrs`) provides `CommandBus`, `QueryBus`, and `EventBus` infrastructure with decorators.
+- Commands return `void` (or a result type for command sourcing); queries return `Promise<DTO>`.
+- TypeScript generics: `interface CommandHandler<C extends Command, R = void>` ties each command to its return type at compile time.
+
+### Example Structure
+```typescript
+// Command side
+interface Command { readonly _type: string; }
+
+class PlaceOrderCommand implements Command {
+  readonly _type = 'PlaceOrder';
+  constructor(readonly customerId: string, readonly items: OrderItem[]) {}
+}
+
+interface CommandHandler<C extends Command, R = void> {
+  handle(command: C): Promise<R>;
+}
+
+class PlaceOrderHandler implements CommandHandler<PlaceOrderCommand, string> {
+  constructor(private orderRepo: OrderRepository, private events: EventBus) {}
+  async handle(cmd: PlaceOrderCommand): Promise<string> {
+    const order = Order.create(cmd.customerId, cmd.items);
+    await this.orderRepo.save(order);
+    await this.events.publish(new OrderPlacedEvent(order.id));
+    return order.id;
+  }
+}
+
+// Query side
+class GetOrderHandler {
+  async handle(query: { orderId: string }): Promise<OrderDTO> {
+    return this.readDb.findOrder(query.orderId);
+  }
+}
 ```

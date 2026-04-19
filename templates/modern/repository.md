@@ -1,7 +1,7 @@
 ---
 name: Repository
 category: modern
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - decouple domain logic from data access
   - swap storage backend without changing business code
@@ -179,5 +179,47 @@ impl UserRepository for InMemoryUserRepository {
     fn find_by_id(&self, id: Uuid) -> Option<User> { self.store.get(&id).cloned() }
     fn save(&mut self, user: User) { self.store.insert(user.id, user); }
     fn delete(&mut self, id: Uuid) { self.store.remove(&id); }
+}
+```
+
+## TypeScript
+
+### Notes
+- Always `async`/`await`; return `Promise<T | null>` for nullable lookups — not `T | undefined`.
+- Define the repository interface in the domain layer; implement in the infrastructure layer (never import ORM types into domain).
+- NestJS + TypeORM: `@InjectRepository(Entity)` injects a TypeORM repository; wrap it in a domain repository class.
+- Generic base: `interface Repository<T, ID> { findById(id: ID): Promise<T | null>; save(entity: T): Promise<T>; }` standardizes signatures.
+
+### Example Structure
+```typescript
+// Domain interface (no ORM imports)
+interface UserRepository {
+  findById(id: string): Promise<User | null>;
+  findByEmail(email: string): Promise<User | null>;
+  save(user: User): Promise<User>;
+  delete(id: string): Promise<void>;
+}
+
+// Infrastructure implementation
+class PostgresUserRepository implements UserRepository {
+  constructor(private db: Pool) {}
+
+  async findById(id: string): Promise<User | null> {
+    const { rows } = await this.db.query('SELECT * FROM users WHERE id = $1', [id]);
+    return rows[0] ? mapRowToUser(rows[0]) : null;
+  }
+
+  async save(user: User): Promise<User> {
+    const { rows } = await this.db.query(
+      `INSERT INTO users (id, email, name) VALUES ($1, $2, $3)
+       ON CONFLICT (id) DO UPDATE SET email = $2, name = $3 RETURNING *`,
+      [user.id, user.email, user.name],
+    );
+    return mapRowToUser(rows[0]);
+  }
+
+  async delete(id: string): Promise<void> {
+    await this.db.query('DELETE FROM users WHERE id = $1', [id]);
+  }
 }
 ```

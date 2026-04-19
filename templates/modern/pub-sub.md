@@ -2,7 +2,7 @@
 name: Pub/Sub
 category: modern
 aliases: [Publisher/Subscriber]
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - decouple producers from multiple consumers
   - fanout notifications
@@ -184,4 +184,39 @@ impl EventBus {
         self.tx.subscribe()
     }
 }
+```
+
+## TypeScript
+
+### Notes
+- `eventemitter3` for typed in-process pub/sub — define `type Events = { 'user:created': [User] }` for type-safe emit/on.
+- For distributed pub/sub: `ioredis` pub/sub, BullMQ (Redis-backed queues), or NATS JetStream.
+- Async subscribers: EventEmitter does not await async handlers — use a typed bus that calls `Promise.allSettled` for controlled dispatch.
+- Clean up subscriptions with `emitter.off()` in teardown (`useEffect` return, `ngOnDestroy`) to prevent memory leaks.
+
+### Example Structure
+```typescript
+import EventEmitter from 'eventemitter3';
+
+// Typed event map — compile error if event name or payload type is wrong
+type AppEvents = {
+  'user:registered': [userId: string, email: string];
+  'order:placed':    [orderId: string, total: number];
+};
+
+const bus = new EventEmitter<AppEvents>();
+
+// Publisher
+bus.emit('user:registered', 'user-123', 'alice@example.com');
+
+// Subscribers (decoupled — no direct import of publisher)
+bus.on('user:registered', (userId, email) => {
+  mailerService.sendWelcome(email);
+});
+
+// Cleanup
+const handler = (orderId: string, total: number) => fulfillmentService.start(orderId);
+bus.on('order:placed', handler);
+// later...
+bus.off('order:placed', handler);
 ```

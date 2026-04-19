@@ -1,7 +1,7 @@
 ---
 name: Saga
 category: modern
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - long-running distributed transaction
   - no 2-phase commit available
@@ -199,4 +199,44 @@ impl OrderSaga {
         log.save(self).await
     }
 }
+```
+
+## TypeScript
+
+### Notes
+- Saga steps typed as `{ execute(ctx: T): Promise<void>; compensate(ctx: T): Promise<void> }` — generic over context type.
+- Orchestration saga: a central async function drives steps; compensation runs in reverse on failure — `try/catch` models this naturally.
+- Choreography saga: services communicate via events — use a typed event bus with discriminated union event types for exhaustiveness.
+- Compensation is best-effort: wrap each `compensate()` in its own `try/catch` to prevent one failed rollback from blocking the rest.
+
+### Example Structure
+```typescript
+interface SagaStep<TCtx> {
+  execute(ctx: TCtx): Promise<void>;
+  compensate(ctx: TCtx): Promise<void>;
+}
+
+async function runSaga<TCtx>(steps: SagaStep<TCtx>[], ctx: TCtx): Promise<void> {
+  const completed: SagaStep<TCtx>[] = [];
+  try {
+    for (const step of steps) {
+      await step.execute(ctx);
+      completed.push(step);
+    }
+  } catch (err) {
+    for (const step of [...completed].reverse()) {
+      try { await step.compensate(ctx); }
+      catch (compensateErr) { console.error('Compensation failed', compensateErr); }
+    }
+    throw new Error(`Saga failed: ${err}`);
+  }
+}
+
+// Usage
+type OrderCtx = { orderId: string; chargeId?: string; trackingNo?: string };
+await runSaga<OrderCtx>([
+  reserveInventoryStep,
+  chargePaymentStep,
+  scheduleShipmentStep,
+], { orderId: 'ord-123' });
 ```
