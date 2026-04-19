@@ -2,7 +2,7 @@
 name: Proxy
 category: structural
 aliases: []
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - control access to object
   - lazy initialization
@@ -172,5 +172,41 @@ impl Service for CachingProxy {
         cache.insert(id, d.clone());
         d
     }
+}
+```
+
+## TypeScript
+
+### Notes
+- Built-in `Proxy` object handles get/set/apply/has traps natively — no wrapper class required for common use cases.
+- `Reflect.*` methods forward trapped operations to the target without losing `this` binding or prototype chain.
+- Virtual proxy with lazy loading: `new Proxy({} as Service, { get: lazyInit })` delays expensive initialization until first access.
+- `Proxy<T>` maintains TypeScript type safety — the proxy is typed as `T`, not a special wrapper type.
+
+### Example Structure
+```typescript
+// Logging proxy — intercepts all method calls
+function createLoggingProxy<T extends object>(target: T): T {
+  return new Proxy(target, {
+    get(obj, prop, receiver) {
+      const value = Reflect.get(obj, prop, receiver);
+      if (typeof value !== 'function') return value;
+      return function (...args: unknown[]) {
+        console.log(`→ ${String(prop)}(${args.map(String).join(', ')})`);
+        return (value as Function).apply(obj, args);
+      };
+    },
+  });
+}
+
+// Virtual proxy — lazy initialization
+function createLazyProxy<T extends object>(factory: () => T): T {
+  let instance: T | null = null;
+  return new Proxy({} as T, {
+    get(_, prop, receiver) {
+      if (!instance) instance = factory();
+      return Reflect.get(instance, prop, receiver);
+    },
+  });
 }
 ```

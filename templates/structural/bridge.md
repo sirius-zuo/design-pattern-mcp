@@ -1,7 +1,7 @@
 ---
 name: Bridge
 category: structural
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - class hierarchy growing in two independent dimensions
   - separate abstraction from implementation
@@ -168,5 +168,44 @@ impl<R: Renderer> Circle<R> {
 struct VectorRenderer;
 impl Renderer for VectorRenderer {
     fn render_circle(&self, r: f64) { /* SVG */ }
+}
+```
+
+## TypeScript
+
+### Notes
+- Bridge via constructor injection: abstraction (`Shape`) holds a reference to the implementation interface (`Renderer`) — no class coupling.
+- TypeScript generics (`class Shape<R extends Renderer>`) can make the bridge explicit in the type signature.
+- Structural typing: any object matching the `Renderer` interface shape is a valid implementation — swap at runtime without casting.
+- Functional alternative: pass the implementation as a callback parameter instead of storing it as a class field.
+
+### Example Structure
+```typescript
+interface Renderer {
+  renderShape(type: string, color: string, size: number): void;
+}
+
+class SVGRenderer implements Renderer {
+  renderShape(type: string, color: string, size: number): void {
+    console.log(`<${type} fill="${color}" size="${size}" />`);
+  }
+}
+
+class CanvasRenderer implements Renderer {
+  renderShape(type: string, color: string, size: number): void {
+    console.log(`ctx.fillStyle='${color}'; ctx.draw${type}(${size})`);
+  }
+}
+
+abstract class Shape {
+  constructor(protected renderer: Renderer) {}
+  abstract draw(): void;
+}
+
+class Circle extends Shape {
+  constructor(renderer: Renderer, private color: string, private radius: number) {
+    super(renderer);
+  }
+  draw(): void { this.renderer.renderShape('circle', this.color, this.radius); }
 }
 ```

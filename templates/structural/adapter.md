@@ -2,7 +2,7 @@
 name: Adapter
 category: structural
 aliases: [Wrapper]
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - incompatible interface from third party
   - legacy component integration
@@ -159,5 +159,41 @@ impl Logger for LoggerAdapter {
     fn log(&self, msg: &str) {
         self.0.write_log("INFO", msg);
     }
+}
+```
+
+## TypeScript
+
+### Notes
+- Structural typing: adapters only need to satisfy the target interface shape — no `implements` declaration required.
+- Object literal adapters (`const adapter: TargetInterface = { method: args => adaptee.otherMethod(args) }`) are concise and testable.
+- `Partial<TargetInterface>` adapters useful when only some target interface methods need adapting.
+- Generic adapters: `function adapt<S, T>(source: S, mapping: (s: S) => T): T` for one-off type conversions.
+
+### Example Structure
+```typescript
+// Target interface (what your application expects)
+interface Logger { log(level: 'info' | 'error', message: string): void; }
+
+// Adaptee (third-party library — cannot modify)
+interface WinstonLike {
+  info(msg: string): void;
+  error(msg: string): void;
+}
+
+// Object-literal adapter — structural typing means no 'implements' needed
+function adaptWinston(winston: WinstonLike): Logger {
+  return {
+    log: (level, message) =>
+      level === 'error' ? winston.error(message) : winston.info(message),
+  };
+}
+
+// Class adapter (when shared state or multiple methods are needed)
+class WinstonAdapter implements Logger {
+  constructor(private winston: WinstonLike) {}
+  log(level: 'info' | 'error', message: string): void {
+    this.winston[level](message);
+  }
 }
 ```

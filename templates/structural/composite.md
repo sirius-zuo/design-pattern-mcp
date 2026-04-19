@@ -1,7 +1,7 @@
 ---
 name: Composite
 category: structural
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - tree structure of objects
   - treat leaf and branch uniformly
@@ -176,5 +176,39 @@ impl Component for Composite {
         let parts: Vec<_> = self.children.iter().map(|c| c.operation()).collect();
         format!("{}({})", self.name, parts.join(","))
     }
+}
+```
+
+## TypeScript
+
+### Notes
+- Common interface for leaf and composite types; TypeScript discriminates them via type guards or union literal fields.
+- `Readonly<T>` and `readonly children` prevent accidental structural mutation after assembly.
+- Recursive `size()` / `render()` methods are naturally typed — TypeScript infers return types across the recursion.
+- For serialization, a discriminated union (`type Node = FileNode | DirNode`) with a `kind` field simplifies `JSON.parse` typing.
+
+### Example Structure
+```typescript
+interface FileSystemItem {
+  readonly name: string;
+  size(): number;
+  print(indent?: number): void;
+}
+
+class File implements FileSystemItem {
+  constructor(readonly name: string, private bytes: number) {}
+  size(): number          { return this.bytes; }
+  print(indent = 0): void { console.log(' '.repeat(indent) + this.name); }
+}
+
+class Directory implements FileSystemItem {
+  private children: FileSystemItem[] = [];
+  constructor(readonly name: string) {}
+  add(item: FileSystemItem): void { this.children.push(item); }
+  size(): number                  { return this.children.reduce((sum, c) => sum + c.size(), 0); }
+  print(indent = 0): void {
+    console.log(' '.repeat(indent) + this.name + '/');
+    this.children.forEach(c => c.print(indent + 2));
+  }
 }
 ```

@@ -2,7 +2,7 @@
 name: Decorator
 category: structural
 aliases: [Wrapper]
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - add responsibilities dynamically without subclassing
   - middleware chain
@@ -174,5 +174,43 @@ impl<H: Handler> Handler for LoggingDecorator<H> {
         println!("← {res}");
         res
     }
+}
+```
+
+## TypeScript
+
+### Notes
+- `@decorator` syntax (Stage 3 proposal, TypeScript 5+ / enabled by default in Angular, NestJS) is idiomatic for cross-cutting concerns.
+- `Proxy`-based decorators: `new Proxy(target, { get: trap })` intercept method calls without modifying the original class.
+- Functional decorators: `function withLogging<T extends (...args: any[]) => any>(fn: T): T` wrap any function generically.
+- Object composition: `const cached = withCache(new Repository())` returns a `Repository`-shaped object, satisfying structural typing.
+
+### Example Structure
+```typescript
+// Proxy-based decorator (object composition, no class modification)
+function withLogging<T extends object>(target: T): T {
+  return new Proxy(target, {
+    get(obj, prop, receiver) {
+      const value = Reflect.get(obj, prop, receiver);
+      if (typeof value === 'function') {
+        return function (...args: unknown[]) {
+          console.log(`Calling ${String(prop)}`, args);
+          const result = (value as Function).apply(obj, args);
+          console.log(`${String(prop)} returned`, result);
+          return result;
+        };
+      }
+      return value;
+    },
+  });
+}
+
+// @decorator syntax (TypeScript 5+, NestJS/Angular)
+function log(target: object, key: string, descriptor: PropertyDescriptor) {
+  const original = descriptor.value as (...args: unknown[]) => unknown;
+  descriptor.value = function (...args: unknown[]) {
+    console.log(`${key}(${args})`);
+    return original.apply(this, args);
+  };
 }
 ```

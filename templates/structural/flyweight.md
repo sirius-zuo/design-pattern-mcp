@@ -1,7 +1,7 @@
 ---
 name: Flyweight
 category: structural
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - large number of fine-grained similar objects
   - memory pressure from object count
@@ -167,4 +167,48 @@ impl GlyphFactory {
             .clone()
     }
 }
+```
+
+## TypeScript
+
+### Notes
+- Flyweight intrinsic state: `readonly` constructor parameters + `Object.freeze()` ensure shared state is never mutated.
+- Pool implemented as `Map<string, Flyweight>` — key is the serialized intrinsic state.
+- TypeScript distinguishes intrinsic (constructor params, shared) from extrinsic (method params, unique per call) at the type level.
+- `WeakRef` + `FinalizationRegistry` for pools where entries should be garbage-collected when no longer referenced.
+
+### Example Structure
+```typescript
+// Flyweight: immutable, shared intrinsic state
+class CharGlyph {
+  constructor(
+    readonly char: string,
+    readonly font: string,
+    readonly size: number,
+  ) { Object.freeze(this); }
+
+  render(x: number, y: number, color: string): void {
+    console.log(`Render '${this.char}' ${this.font}/${this.size} at (${x},${y}) ${color}`);
+  }
+}
+
+// Factory manages the pool
+class GlyphFactory {
+  private pool = new Map<string, CharGlyph>();
+
+  get(char: string, font: string, size: number): CharGlyph {
+    const key = `${char}::${font}::${size}`;
+    if (!this.pool.has(key)) {
+      this.pool.set(key, new CharGlyph(char, font, size));
+    }
+    return this.pool.get(key)!;
+  }
+
+  poolSize(): number { return this.pool.size; }
+}
+
+// Extrinsic state (x, y, color) is passed per render call, not stored
+const factory = new GlyphFactory();
+factory.get('A', 'Arial', 12).render(10, 20, 'black');
+factory.get('A', 'Arial', 12).render(30, 20, 'red'); // reuses same glyph
 ```

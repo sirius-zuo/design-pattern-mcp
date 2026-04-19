@@ -1,7 +1,7 @@
 ---
 name: Facade
 category: structural
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - simplify complex subsystem interface
   - decouple clients from subsystem internals
@@ -157,5 +157,33 @@ impl VideoFacade {
         let processed = self.effects.apply(raw);
         self.encoder.encode(processed, dst, format)
     }
+}
+```
+
+## TypeScript
+
+### Notes
+- Async facade: all methods `async`, `await`ing multiple subsystem calls; callers see a simple `Promise<Result>`.
+- `private readonly` subsystem dependencies injected via constructor — enables testing with mock implementations.
+- For NestJS: a Facade is typically a Service that orchestrates multiple other Services or repositories.
+- TypeScript discriminated union return types (`Promise<{ ok: true; data: D } | { ok: false; error: string }>`) make facade errors explicit.
+
+### Example Structure
+```typescript
+class OrderFacade {
+  constructor(
+    private readonly inventory: InventoryService,
+    private readonly payment: PaymentService,
+    private readonly shipping: ShippingService,
+    private readonly notifications: NotificationService,
+  ) {}
+
+  async placeOrder(order: PlaceOrderRequest): Promise<OrderConfirmation> {
+    await this.inventory.reserve(order.items);
+    const charge   = await this.payment.charge({ amount: order.total, method: order.paymentMethod });
+    const tracking = await this.shipping.schedule(order.address, order.items);
+    await this.notifications.sendConfirmation(order.customerId, tracking.number);
+    return { orderId: order.id, chargeId: charge.id, trackingNumber: tracking.number };
+  }
 }
 ```
