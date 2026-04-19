@@ -27,7 +27,7 @@ Get structural constraints and anti-patterns for a specific pattern in a specifi
 ## Installation
 
 ```bash
-git clone git@github.com:olivezuo/design-pattern-mcp.git
+git clone git@github.com:sirius-zuo/design-pattern-mcp.git
 cd design-pattern-mcp
 npm install
 npm run build
