@@ -1,7 +1,7 @@
 ---
 name: Pipe and Filter
 category: architectural
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - data processing pipeline with composable steps
   - transformation steps need to be reorderable or replaceable
@@ -160,4 +160,46 @@ let (tx_raw, rx_raw)     = mpsc::channel::<Vec<u8>>(100);
 let (tx_parsed, rx_parsed) = mpsc::channel::<Record>(100);
 tokio::spawn(parse_filter(rx_raw, tx_parsed));
 tokio::spawn(enrich_filter(rx_parsed, tx_sink));
+```
+
+## TypeScript
+
+### Notes
+- Async generator functions (`async function* filter(source: AsyncIterable<T>)`) are the idiomatic TypeScript pipe — lazy, composable, backpressure-aware.
+- For synchronous pipelines: `Array.prototype` chains (`.map().filter().reduce()`) or plain generator functions.
+- `for await...of` at the sink consumes the async pipeline without pulling all data into memory.
+- Node.js `Transform` streams for high-throughput binary/text pipelines with built-in backpressure.
+
+### Example Structure
+```typescript
+// Async generator pipeline — each filter wraps an AsyncIterable
+async function* parseLines(source: AsyncIterable<Buffer>): AsyncIterable<string> {
+  for await (const chunk of source) {
+    for (const line of chunk.toString().split('\n')) {
+      if (line.trim()) yield line;
+    }
+  }
+}
+
+async function* filterErrors(source: AsyncIterable<string>): AsyncIterable<LogRecord> {
+  for await (const line of source) {
+    const record = parseLogLine(line);
+    if (record.level === 'error') yield record;
+  }
+}
+
+async function* enrichWithGeo(source: AsyncIterable<LogRecord>): AsyncIterable<EnrichedRecord> {
+  for await (const record of source) {
+    yield { ...record, geo: await geoLookup(record.ip) };
+  }
+}
+
+// Assembly — compose by wrapping; sink pulls through the pipeline
+async function writeToDB(source: AsyncIterable<EnrichedRecord>): Promise<void> {
+  for await (const record of source) {
+    await db.insert('logs', record);
+  }
+}
+
+await writeToDB(enrichWithGeo(filterErrors(parseLines(fileStream))));
 ```

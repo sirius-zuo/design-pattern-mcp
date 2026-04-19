@@ -1,7 +1,7 @@
 ---
 name: MVC/MVP/MVVM
 category: architectural
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - UI application with separate presentation and business logic
   - testable UI components
@@ -143,5 +143,44 @@ impl Counter {
     fn update(&mut self, msg: Message) {          // ViewModel update
         match msg { Message::Increment => self.value += 1 }
     }
+}
+```
+
+## TypeScript
+
+### Notes
+- React: component = View; custom hook = ViewModel; service = Model — hooks separate UI state management from business logic.
+- NestJS: `@Controller` = MVC Controller; `@Injectable` service = Model; JSON response = View (no template engine needed).
+- Angular: Component (View + Controller) + Service (Model); `@Input`/`@Output` and two-way binding tie them together.
+- Express: router/controller = Controller; service/repository = Model; template or JSON response = View.
+
+### Example Structure
+```typescript
+// React MVVM — ViewModel as a custom hook
+function useUserList() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const data = await userService.fetchAll();
+    setUsers(data);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+  return { users, loading, refresh: load };
+}
+
+// View consumes the ViewModel hook
+function UserListView(): JSX.Element {
+  const { users, loading, refresh } = useUserList();
+  if (loading) return <Spinner />;
+  return (
+    <>
+      <button onClick={refresh}>Refresh</button>
+      <ul>{users.map(u => <li key={u.id}>{u.name}</li>)}</ul>
+    </>
+  );
 }
 ```

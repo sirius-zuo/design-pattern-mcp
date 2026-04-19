@@ -1,7 +1,7 @@
 ---
 name: Event-Driven Architecture
 category: architectural
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - high scalability with loose coupling
   - async reaction to state changes
@@ -186,4 +186,43 @@ async fn consume_orders(consumer: Arc<Consumer>, inventory: Arc<InventoryService
         inventory.reserve_stock(&evt.order_id).await.unwrap();
     }
 }
+```
+
+## TypeScript
+
+### Notes
+- Discriminated union event types (`type AppEvent = OrderPlaced | PaymentFailed | ShipmentCreated`) provide compile-time exhaustiveness.
+- `eventemitter3` with typed `Events` map for in-process events; Kafka/NATS for distributed cross-service events.
+- NestJS `@OnEvent('order.placed')` decorators + `EventEmitter2` for declarative subscriptions in service classes.
+- Async handlers: use a bus that awaits `Promise.allSettled` to ensure all handlers complete before continuing.
+
+### Example Structure
+```typescript
+// Discriminated union — exhaustiveness guaranteed by TypeScript
+type AppEvent =
+  | { type: 'OrderPlaced';    orderId: string; amount: number }
+  | { type: 'PaymentFailed';  orderId: string; reason: string }
+  | { type: 'ShipmentCreated'; orderId: string; trackingNo: string };
+
+class TypedEventBus {
+  private handlers = new Map<string, ((e: AppEvent) => Promise<void>)[]>();
+
+  on<T extends AppEvent['type']>(
+    type: T,
+    fn: (e: Extract<AppEvent, { type: T }>) => Promise<void>,
+  ): void {
+    const existing = this.handlers.get(type) ?? [];
+    this.handlers.set(type, [...existing, fn as (e: AppEvent) => Promise<void>]);
+  }
+
+  async emit(event: AppEvent): Promise<void> {
+    const fns = this.handlers.get(event.type) ?? [];
+    await Promise.allSettled(fns.map(fn => fn(event)));
+  }
+}
+
+const bus = new TypedEventBus();
+bus.on('OrderPlaced', async ({ orderId, amount }) => {
+  await inventoryService.reserve(orderId);
+});
 ```

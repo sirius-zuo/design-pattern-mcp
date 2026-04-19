@@ -1,7 +1,7 @@
 ---
 name: Clean Architecture
 category: architectural
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - business rules must be independent of frameworks
   - strict inward-only dependency rule
@@ -169,4 +169,42 @@ impl<R: UserRepository> RegisterUserUseCase<R> {
         Ok(user.id)
     }
 }
+```
+
+## TypeScript
+
+### Notes
+- Entity classes have zero imports from framework or infrastructure packages — enforced by directory structure and `eslint-plugin-import` rules.
+- Use case classes depend only on domain entities and port interfaces (not HTTP types, ORM types, etc.).
+- NestJS is the outermost adapter layer: controllers call use cases; use cases don't know about HTTP or NestJS.
+- `dependency-cruiser` or `eslint-plugin-boundaries` enforce architectural layer dependencies at CI time.
+
+### Example Structure
+```typescript
+// Entity (innermost — no external imports)
+class Order {
+  constructor(readonly id: string, readonly items: Item[], private status = 'new') {}
+  place(): void           { if (this.status !== 'new') throw new Error('Already placed'); this.status = 'placed'; }
+  isPlaced(): boolean     { return this.status === 'placed'; }
+}
+
+// Port interfaces (domain layer — no ORM/framework imports)
+interface OrderRepository { save(order: Order): Promise<void>; }
+interface EventPublisher  { publish(event: DomainEvent): Promise<void>; }
+
+// Use case (depends on entities + ports only)
+class PlaceOrderUseCase {
+  constructor(private repo: OrderRepository, private events: EventPublisher) {}
+  async execute(dto: { id: string; items: Item[] }): Promise<Order> {
+    const order = new Order(dto.id, dto.items);
+    order.place();
+    await this.repo.save(order);
+    await this.events.publish({ type: 'OrderPlaced', orderId: order.id });
+    return order;
+  }
+}
+
+// Adapter (outermost — NestJS controller, Express handler, etc.)
+// @Controller('orders')
+// class OrderController { constructor(private useCase: PlaceOrderUseCase) {} ... }
 ```

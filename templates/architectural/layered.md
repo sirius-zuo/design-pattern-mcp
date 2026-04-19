@@ -2,7 +2,7 @@
 name: Layered Architecture
 category: architectural
 aliases: [N-Tier]
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - traditional enterprise application
   - presentation business data separation
@@ -173,5 +173,46 @@ impl UserService {
 // handler/user_handler.rs (Axum)
 async fn get_user(Path(id): Path<String>, State(svc): State<Arc<UserService>>) -> impl IntoResponse {
     Json(svc.get_user(&id).await.unwrap())
+}
+```
+
+## TypeScript
+
+### Notes
+- NestJS aligns naturally with layered: `@Controller` (presentation) → `@Injectable` service (business) → repository (data).
+- `interface` types in the service layer decouple business logic from controller and repository implementations.
+- DTO types in the presentation layer; Entity types in the data layer — explicit mapping between layers prevents leakage.
+- `eslint-plugin-import` no-restricted-imports rules enforce that presentation layer never imports from the data layer directly.
+
+### Example Structure
+```typescript
+// Presentation layer
+@Controller('users')
+class UserController {
+  constructor(private readonly userService: UserService) {}
+
+  @Get(':id')
+  async getUser(@Param('id') id: string): Promise<UserDTO> {
+    return this.userService.findById(id);
+  }
+}
+
+// Business layer
+@Injectable()
+class UserService {
+  constructor(private readonly userRepo: UserRepository) {}
+
+  async findById(id: string): Promise<UserDTO> {
+    const user = await this.userRepo.findById(id);
+    if (!user) throw new NotFoundException(`User ${id} not found`);
+    return { id: user.id, email: user.email, name: user.name };
+  }
+}
+
+// Data layer
+@Injectable()
+class UserRepository {
+  constructor(@InjectRepository(UserEntity) private repo: Repository<UserEntity>) {}
+  async findById(id: string): Promise<UserEntity | null> { return this.repo.findOneBy({ id }); }
 }
 ```

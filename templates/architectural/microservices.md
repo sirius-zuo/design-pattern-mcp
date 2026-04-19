@@ -1,7 +1,7 @@
 ---
 name: Microservices
 category: architectural
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - independent deployability for different parts
   - different scaling requirements per capability
@@ -154,5 +154,39 @@ async fn main() {
         .with_state(svc);
     axum::Server::bind(&"0.0.0.0:8080".parse().unwrap())
         .serve(app.into_make_service()).await.unwrap();
+}
+```
+
+## TypeScript
+
+### Notes
+- Each microservice is its own Node.js process with its own `package.json`; share only generated protobuf types or OpenAPI client SDKs, not business code.
+- NestJS per service — `@nestjs/microservices` for gRPC, TCP, NATS, Kafka transport between services.
+- `axios` or `fetch` for inter-service HTTP; `@nestjs/microservices` `ClientProxy` for typed RPC.
+- Instrument each service with structured logging (`pino`), metrics (`prom-client`), and tracing (OpenTelemetry `@opentelemetry/sdk-node`).
+
+### Example Structure
+```typescript
+// order-service/src/main.ts — standalone NestJS app
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  await app.listen(3001);
+}
+bootstrap();
+
+// order-service/src/order.service.ts
+@Injectable()
+class OrderService {
+  constructor(
+    private readonly orderRepo: OrderRepository,
+    @Inject(INVENTORY_CLIENT) private readonly inventory: ClientProxy,
+  ) {}
+
+  async placeOrder(dto: PlaceOrderDto): Promise<Order> {
+    const order = Order.create(dto.customerId, dto.items);
+    await lastValueFrom(this.inventory.send('reserve', { items: dto.items }));
+    await this.orderRepo.save(order);
+    return order;
+  }
 }
 ```

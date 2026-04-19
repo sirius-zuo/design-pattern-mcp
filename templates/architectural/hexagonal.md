@@ -2,7 +2,7 @@
 name: Hexagonal Architecture
 category: architectural
 aliases: [Ports and Adapters]
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - domain must be independent of infrastructure
   - swap databases or transport without changing domain
@@ -160,4 +160,44 @@ impl UserService {
 pub struct PostgresUserRepo { pool: PgPool }
 #[async_trait]
 impl UserRepository for PostgresUserRepo { /* SQL impl */ }
+```
+
+## TypeScript
+
+### Notes
+- Port interfaces defined with TypeScript `interface` in the domain layer — adapters implement via structural typing, no `implements` required.
+- NestJS modules wire adapters to ports: domain module exports the port interface; infrastructure module provides the adapter implementation.
+- `@Injectable()` adapters registered with NestJS DI using custom provider tokens: `{ provide: NOTIFICATION_PORT, useClass: SendGridAdapter }`.
+- Constructor injection of port interfaces in application services keeps domain code entirely free of framework dependencies.
+
+### Example Structure
+```typescript
+// Port (domain layer — pure TypeScript, no framework imports)
+interface NotificationPort {
+  send(userId: string, message: string): Promise<void>;
+}
+
+// Application service (depends only on ports)
+class UserRegistrationService {
+  constructor(
+    private readonly userRepo: UserRepository,   // port
+    private readonly notify:   NotificationPort, // port
+  ) {}
+
+  async register(dto: RegisterDto): Promise<User> {
+    const user = User.create(dto.email, dto.name);
+    await this.userRepo.save(user);
+    await this.notify.send(user.id, `Welcome, ${user.name}!`);
+    return user;
+  }
+}
+
+// Adapter (infrastructure layer — depends on external SDK)
+class SendGridAdapter implements NotificationPort {
+  constructor(private client: SendGridClient) {}
+  async send(userId: string, message: string): Promise<void> {
+    await this.client.send({ to: userId, subject: 'Welcome', text: message });
+  }
+}
+// NestJS wiring: { provide: NOTIFICATION_PORT, useClass: SendGridAdapter }
 ```
