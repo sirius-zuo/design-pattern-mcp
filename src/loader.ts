@@ -10,6 +10,7 @@ const LANG_HEADING: Record<string, string> = {
   java: 'Java',
   python: 'Python',
   rust: 'Rust',
+  typescript: 'TypeScript',
 };
 
 function extractSection(content: string, sectionName: string): string {

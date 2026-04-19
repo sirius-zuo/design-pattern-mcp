@@ -7,7 +7,7 @@ const FIXTURE = `---
 name: TestPattern
 category: behavioral
 aliases: [TestAlias]
-languages: [go, python, generic]
+languages: [go, python, typescript, generic]
 triggers:
   - test trigger phrase
   - another trigger
@@ -47,6 +47,15 @@ type TestPattern struct{}
 \`\`\`python
 class TestPattern:
     pass
+\`\`\`
+
+## TypeScript
+### Notes
+- TypeScript test note
+
+### Example Structure
+\`\`\`typescript
+const ts = 'TypeScript test';
 \`\`\`
 `;
 
@@ -88,6 +97,12 @@ describe('loadTemplates', () => {
     const { patternIndex } = loadTemplates(tmpDir);
     const entry = patternIndex.get('testpattern')!;
     expect(entry.languageSections.get('go')!.notes).toContain('Go-specific note');
+  });
+
+  it('parses TypeScript language section notes', () => {
+    const { patternIndex } = loadTemplates(tmpDir);
+    const entry = patternIndex.get('testpattern')!;
+    expect(entry.languageSections.get('typescript')!.notes).toContain('TypeScript test note');
   });
 
   it('parses components, constraints, and antiPatterns', () => {
