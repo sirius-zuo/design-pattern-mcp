@@ -1,7 +1,7 @@
 ---
 name: Factory Method
 category: creational
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - subclass controls which class is instantiated
   - object creation logic too complex for constructor
@@ -167,4 +167,35 @@ struct SeaLogistics;
 impl Logistics for SeaLogistics {
     fn create_transport(&self) -> Box<dyn Transport> { Box::new(Ship) }
 }
+```
+
+## TypeScript
+
+### Notes
+- A `create(type: 'email' | 'sms' | 'push'): Notification` function is often more idiomatic than a Factory Method class hierarchy.
+- Discriminated union of channel types enables exhaustive type checking in the factory switch.
+- `Record<NotificationChannel, () => Notification>` maps channels to factories without a switch statement.
+- Abstract creator classes add value when factories need shared pre/post-processing logic; otherwise prefer plain functions.
+
+### Example Structure
+```typescript
+interface Notification { send(message: string): Promise<void>; }
+
+type Channel = 'email' | 'sms' | 'push';
+
+// Function-based factory (idiomatic)
+function createNotification(channel: Channel): Notification {
+  switch (channel) {
+    case 'email': return { send: async (msg) => emailClient.send(msg) };
+    case 'sms':   return { send: async (msg) => smsClient.send(msg) };
+    case 'push':  return { send: async (msg) => pushClient.send(msg) };
+  }
+}
+
+// Map-based factory (no switch)
+const factories: Record<Channel, () => Notification> = {
+  email: () => ({ send: async (msg) => emailClient.send(msg) }),
+  sms:   () => ({ send: async (msg) => smsClient.send(msg) }),
+  push:  () => ({ send: async (msg) => pushClient.send(msg) }),
+};
 ```

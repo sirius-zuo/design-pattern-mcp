@@ -2,7 +2,7 @@
 name: Builder
 category: creational
 aliases: [Fluent Builder]
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - many optional parameters
   - complex multi-step construction
@@ -181,4 +181,40 @@ impl CarBuilder {
         Ok(Car { engine, wheels: self.wheels, color: self.color })
     }
 }
+```
+
+## TypeScript
+
+### Notes
+- Method chaining with `this` return types (`add(x: T): this`) works correctly in subclasses without covariant return type issues.
+- Immutable builders: return `new Builder({ ...this.state, [key]: value })` from each setter to avoid shared mutable state.
+- `Required<BuilderState>` in the `build()` signature enforces all required fields have been set before building.
+- For simple config objects a plain `Partial<Config>` accumulator with a final `validate()` is often simpler than a full Builder class.
+
+### Example Structure
+```typescript
+class QueryBuilder {
+  private state: { table?: string; conditions: string[]; limitVal?: number } = { conditions: [] };
+
+  from(table: string): this          { this.state.table = table; return this; }
+  where(condition: string): this     { this.state.conditions.push(condition); return this; }
+  limit(n: number): this             { this.state.limitVal = n; return this; }
+
+  build(): string {
+    if (!this.state.table) throw new Error('table is required');
+    let q = `SELECT * FROM ${this.state.table}`;
+    if (this.state.conditions.length) q += ` WHERE ${this.state.conditions.join(' AND ')}`;
+    if (this.state.limitVal)          q += ` LIMIT ${this.state.limitVal}`;
+    return q;
+  }
+}
+
+// Usage
+const sql = new QueryBuilder()
+  .from('users')
+  .where('active = true')
+  .where("role = 'admin'")
+  .limit(10)
+  .build();
+// SELECT * FROM users WHERE active = true AND role = 'admin' LIMIT 10
 ```

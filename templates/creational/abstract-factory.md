@@ -1,7 +1,7 @@
 ---
 name: Abstract Factory
 category: creational
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - families of related objects
   - swap entire product family at runtime
@@ -180,5 +180,37 @@ impl GUIFactory for WindowsFactory {
 fn build_ui(factory: &dyn GUIFactory) {
     factory.create_button().render();
     factory.create_checkbox().toggle();
+}
+```
+
+## TypeScript
+
+### Notes
+- Factory naturally expressed as a plain object literal: `const darkTheme: UIFactory = { createButton: () => ..., createCheckbox: () => ... }`.
+- Structural typing: any object matching the `UIFactory` interface shape is a valid factory — no `implements` keyword required.
+- Module-level factory `const`s are tree-shakeable; bundlers eliminate unused factory variants.
+- Functional factory: `function createUIFactory(theme: 'light' | 'dark'): UIFactory` — a factory function returning the factory object.
+
+### Example Structure
+```typescript
+interface Button   { render(): string; }
+interface Checkbox { render(): string; }
+interface UIFactory {
+  createButton():   Button;
+  createCheckbox(): Checkbox;
+}
+
+const lightTheme: UIFactory = {
+  createButton:   () => ({ render: () => '<button class="light">Click</button>' }),
+  createCheckbox: () => ({ render: () => '<input type="checkbox" class="light">' }),
+};
+
+const darkTheme: UIFactory = {
+  createButton:   () => ({ render: () => '<button class="dark">Click</button>' }),
+  createCheckbox: () => ({ render: () => '<input type="checkbox" class="dark">' }),
+};
+
+function renderForm(factory: UIFactory): string {
+  return factory.createButton().render() + factory.createCheckbox().render();
 }
 ```

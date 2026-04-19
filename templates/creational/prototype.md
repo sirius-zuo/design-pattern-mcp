@@ -1,7 +1,7 @@
 ---
 name: Prototype
 category: creational
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - expensive object creation
   - clone existing object
@@ -167,4 +167,41 @@ impl Registry {
         self.store.get(name).cloned()
     }
 }
+```
+
+## TypeScript
+
+### Notes
+- `structuredClone()` (Node 17+) is the standard deep-clone for plain objects and most built-in types — no custom code needed.
+- Object spread (`{ ...original }`) for shallow clones; add nested spread for one-level-deep clones.
+- Class-based prototype: implement `clone(): this` using `Object.assign(Object.create(Object.getPrototypeOf(this)), this)`.
+- Generic clone utility: `function clone<T>(obj: T): T { return structuredClone(obj); }` — preserves type information without casting.
+
+### Example Structure
+```typescript
+// Plain object clone — idiomatic for most cases
+const original = { host: 'localhost', port: 5432, options: { ssl: false } };
+const copy = structuredClone(original); // deep clone
+copy.options.ssl = true; // does not affect original
+
+// Class-based prototype
+class ServerConfig {
+  constructor(
+    public host: string,
+    public port: number,
+    public options: Record<string, unknown> = {},
+  ) {}
+
+  clone(): ServerConfig {
+    return Object.assign(
+      Object.create(Object.getPrototypeOf(this)),
+      { ...this, options: { ...this.options } },
+    ) as ServerConfig;
+  }
+}
+
+const prod  = new ServerConfig('db.prod.example', 5432, { ssl: true });
+const local = prod.clone();
+local.host        = 'localhost';
+local.options.ssl = false;
 ```

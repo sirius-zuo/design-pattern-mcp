@@ -1,7 +1,7 @@
 ---
 name: Singleton
 category: creational
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - exactly one instance required
   - global coordination point
@@ -157,5 +157,41 @@ fn get_instance() -> &'static Mutex<Config> {
     INSTANCE.get_or_init(|| {
         Mutex::new(Config { dsn: "postgres://...".into() })
     })
+}
+```
+
+## TypeScript
+
+### Notes
+- Module-level `export const instance = new MyClass()` is the idiomatic TypeScript singleton — the Node.js module cache guarantees a single instance.
+- Class-based singleton with `private constructor` + `static getInstance()` is legacy style; use only when lazy initialization is strictly required.
+- For testability: dependency-inject the singleton rather than importing it directly in production code.
+- `Object.freeze(instance)` prevents accidental mutation of singleton state in a shared module.
+
+### Example Structure
+```typescript
+// Idiomatic — module-level singleton (leverages Node.js module cache)
+class DatabaseConnection {
+  private constructor(private readonly url: string) {}
+  query(sql: string): Promise<unknown[]> { /* ... */ return Promise.resolve([]); }
+
+  static create(url: string): DatabaseConnection { return new DatabaseConnection(url); }
+}
+
+export const db = DatabaseConnection.create(process.env.DATABASE_URL!);
+
+// Usage in any other module
+import { db } from './database';
+db.query('SELECT 1');
+
+// Class-based (legacy — use only when lazy init is needed)
+class Registry {
+  private static instance: Registry | null = null;
+  private constructor(private data = new Map<string, string>()) {}
+
+  static getInstance(): Registry {
+    return (Registry.instance ??= new Registry());
+  }
+  get(key: string): string | undefined { return this.data.get(key); }
 }
 ```
