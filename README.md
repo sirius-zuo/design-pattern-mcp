@@ -94,6 +94,101 @@ Add to `.vscode/mcp.json` (project) or user settings:
 }
 ```
 
+## Usage in Claude Desktop
+
+Once registered, you can ask Claude to use the tools directly in conversation. The typical workflow is: **suggest a pattern first**, then **fetch the full template** for the one you want to implement.
+
+---
+
+### Example 1 — Find the right pattern
+
+**You ask Claude:**
+
+> I need to support multiple payment methods like credit card, PayPal, and crypto that can be swapped at runtime. What pattern should I use?
+
+**Claude calls `suggest_pattern` and returns:**
+
+```
+[
+  {
+    "name": "Strategy",
+    "category": "behavioral",
+    "rationale": "multiple interchangeable algorithms",
+    "confidence": 0.67
+  },
+  {
+    "name": "Decorator",
+    "category": "structural",
+    "rationale": "add responsibilities dynamically without subclassing",
+    "confidence": 0.50
+  },
+  {
+    "name": "Saga",
+    "category": "modern",
+    "rationale": "long-running distributed transaction",
+    "confidence": 0.33
+  }
+]
+```
+
+Strategy is the strongest match. You then ask for the full template.
+
+---
+
+### Example 2 — Get the full template for your language
+
+**You ask Claude:**
+
+> Give me the Strategy pattern template for TypeScript.
+
+**Claude calls `get_template` with `{ pattern: "strategy", language: "typescript" }` and returns:**
+
+```
+Pattern: Strategy
+Language: typescript
+
+COMPONENTS:
+- **Context**: Holds a reference to a Strategy. Delegates algorithm execution to it. Contains NO algorithm logic itself.
+
+CONSTRAINTS:
+- Context must NOT contain algorithm logic; all logic lives in ConcreteStrategy.
+
+ANTI-PATTERNS:
+- Embedding the if/else or switch selection logic inside Context (defeats the purpose).
+
+TYPESCRIPT-SPECIFIC NOTES:
+- Define single-method stateless strategies as function types: `type SortStrategy = (data: number[]) => number[]` — no interface or class needed.
+- Multi-method or stateful strategies: use an `interface` with structural typing — no `implements` declaration required.
+- Inject via constructor (`constructor(private strategy: SortStrategy)`) for immutability; use a setter only when runtime switching is required.
+- `Context` holds a field typed to the function type or interface; calling it is `this.strategy(params)` or `this.strategy.execute(params)`.
+
+EXAMPLE STRUCTURE:
+```typescript
+type Sorter = (data: number[]) => number[];
+
+class SortContext {
+  constructor(private strategy: Sorter) {}
+  setStrategy(s: Sorter): void { this.strategy = s; }
+  run(data: number[]): number[] { return this.strategy(data); }
+}
+
+// Usage — any function with the right signature is a valid strategy
+const ctx = new SortContext(data => [...data].sort((a, b) => a - b));
+ctx.run([3, 1, 2]); // [1, 2, 3]
+
+// Interface-based for stateful strategies
+interface PricingStrategy { calculate(basePrice: number): number; }
+class DiscountStrategy implements PricingStrategy {
+  constructor(private pct: number) {}
+  calculate(base: number): number { return base * (1 - this.pct); }
+}
+```
+```
+
+Claude then uses this output as grounding constraints when writing your actual payment service code — ensuring the context doesn't embed algorithm logic, strategies are injected via constructor, and the TypeScript-idiomatic function-type approach is used.
+
+---
+
 ## Pattern Coverage
 
 38 patterns across 5 categories:
