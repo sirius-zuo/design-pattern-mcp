@@ -1,7 +1,7 @@
 ---
 name: Memento
 category: behavioral
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - undo/redo state
   - save and restore object state
@@ -187,4 +187,41 @@ impl History {
         if let Some(m) = self.stack.pop() { e.restore(m); }
     }
 }
+```
+
+## TypeScript
+
+### Notes
+- Store plain object snapshots (`const snapshot = { ...state }` or `structuredClone(state)`) instead of Memento class instances.
+- `Readonly<T>` and `readonly` property modifiers enforce that saved state cannot be mutated externally.
+- `structuredClone()` (Node 17+) for deep snapshots of complex state without custom serialization code.
+- Undo/redo stacks: `const history: ReadonlyArray<State> = []` with append-only updates keeps snapshots immutable.
+
+### Example Structure
+```typescript
+type EditorState = Readonly<{ text: string; cursorPos: number }>;
+
+class Editor {
+  private state: EditorState = { text: '', cursorPos: 0 };
+
+  type(chars: string): void {
+    this.state = { text: this.state.text + chars, cursorPos: this.state.cursorPos + chars.length };
+  }
+  save(): EditorState         { return { ...this.state }; }
+  restore(s: EditorState): void { this.state = s; }
+  getText(): string           { return this.state.text; }
+}
+
+class History {
+  private stack: EditorState[] = [];
+  push(s: EditorState): void        { this.stack.push(s); }
+  pop(): EditorState | undefined    { return this.stack.pop(); }
+}
+
+// Usage
+const history = new History();
+const editor  = new Editor();
+history.push(editor.save());
+editor.type('Hello');
+editor.restore(history.pop()!); // undo
 ```

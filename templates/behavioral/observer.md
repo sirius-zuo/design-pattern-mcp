@@ -2,7 +2,7 @@
 name: Observer
 category: behavioral
 aliases: [Event, Listener]
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - notify multiple subscribers on state change
   - event-driven notification
@@ -180,4 +180,38 @@ impl ConcreteSubject {
         self.inner.notify(&format!("state:{s}"));
     }
 }
+```
+
+## TypeScript
+
+### Notes
+- Node.js `EventEmitter` is the standard Observer for server-side TypeScript — `on`, `emit`, `off` built in.
+- For typed, composable reactive streams: RxJS `Subject<T>` and `Observable<T>` are idiomatic in Angular and complex event pipelines.
+- Strongly type events with `eventemitter3`: `new EventEmitter<{ 'price:changed': [number] }>()` eliminates stringly-typed names.
+- Clean up with `emitter.off(event, handler)` in teardown (`useEffect` cleanup, `ngOnDestroy`) to prevent memory leaks.
+
+### Example Structure
+```typescript
+import { EventEmitter } from 'events';
+
+class StockTicker extends EventEmitter {
+  private price = 0;
+
+  setPrice(price: number): void {
+    this.price = price;
+    this.emit('price:changed', price);
+  }
+  getPrice(): number { return this.price; }
+}
+
+// Observers attach at runtime
+const ticker = new StockTicker();
+const alertHandler = (price: number) => {
+  if (price > 500) console.warn(`High price: ${price}`);
+};
+ticker.on('price:changed', alertHandler);
+ticker.on('price:changed', (p) => console.log(`Current price: ${p}`));
+
+ticker.setPrice(600); // both handlers fire
+ticker.off('price:changed', alertHandler); // unsubscribe
 ```

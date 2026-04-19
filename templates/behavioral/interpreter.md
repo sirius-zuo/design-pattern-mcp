@@ -1,7 +1,7 @@
 ---
 name: Interpreter
 category: behavioral
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - simple grammar DSL
   - expression evaluator
@@ -173,4 +173,37 @@ impl Expr {
         }
     }
 }
+```
+
+## TypeScript
+
+### Notes
+- Discriminated unions model expression ASTs without class hierarchies: `type Expr = { kind: 'literal'; val: number } | { kind: 'add'; left: Expr; right: Expr }`.
+- A recursive function over the discriminated union is more idiomatic than a Visitor class hierarchy for closed expression sets.
+- TypeScript's `switch` exhaustiveness check (`default: expr satisfies never`) ensures all expression types are handled.
+- Use `Map<string, number>` as the context/environment for variable-binding interpreters.
+
+### Example Structure
+```typescript
+type Expr =
+  | { kind: 'literal'; val: number }
+  | { kind: 'add'; left: Expr; right: Expr }
+  | { kind: 'mul'; left: Expr; right: Expr };
+
+function evaluate(expr: Expr, env: Map<string, number> = new Map()): number {
+  switch (expr.kind) {
+    case 'literal': return expr.val;
+    case 'add':     return evaluate(expr.left, env) + evaluate(expr.right, env);
+    case 'mul':     return evaluate(expr.left, env) * evaluate(expr.right, env);
+    default:        return expr satisfies never;
+  }
+}
+
+// Usage: (3 + 4) * 2
+const ast: Expr = {
+  kind: 'mul',
+  left: { kind: 'add', left: { kind: 'literal', val: 3 }, right: { kind: 'literal', val: 4 } },
+  right: { kind: 'literal', val: 2 },
+};
+evaluate(ast); // 14
 ```

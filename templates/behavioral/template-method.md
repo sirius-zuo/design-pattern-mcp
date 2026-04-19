@@ -1,7 +1,7 @@
 ---
 name: Template Method
 category: behavioral
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - same algorithm skeleton with variable steps
   - shared steps across subclasses with one different step
@@ -178,5 +178,35 @@ trait DataProcessor {
 struct CsvProcessor;
 impl DataProcessor for CsvProcessor {
     fn parse(&self, _raw: &str) -> Vec<Record> { vec![] }
+}
+```
+
+## TypeScript
+
+### Notes
+- Abstract classes with abstract methods are well-supported in TypeScript — use `abstract class` and `abstract method()`.
+- `protected` modifier enforces the template structure: subclasses override hooks but cannot call the template method bypass.
+- Functional alternative: pass hook functions as constructor parameters (`{ validate, transform }`) to avoid inheritance entirely.
+- Generics (`abstract class Processor<TIn, TOut>`) make template methods type-safe across different data shapes.
+
+### Example Structure
+```typescript
+abstract class ReportGenerator<TRaw, TProcessed> {
+  // Template method — do not override
+  generate(raw: TRaw): string {
+    const validated = this.validate(raw);
+    const processed = this.transform(validated);
+    return this.format(processed);
+  }
+
+  protected abstract validate(raw: TRaw): TRaw;
+  protected abstract transform(data: TRaw): TProcessed;
+  protected format(data: TProcessed): string { return JSON.stringify(data); } // optional override
+}
+
+class CSVReportGenerator extends ReportGenerator<string[], Record<string, string>[]> {
+  protected validate(rows: string[]): string[]                        { return rows.filter(r => r.trim()); }
+  protected transform(rows: string[]): Record<string, string>[]       { return rows.map(parseCSVRow); }
+  protected override format(data: Record<string, string>[]): string   { return toCSV(data); }
 }
 ```

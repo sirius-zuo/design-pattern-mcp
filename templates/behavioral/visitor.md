@@ -1,7 +1,7 @@
 ---
 name: Visitor
 category: behavioral
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - many distinct operations on object structure
   - add operations without changing element classes
@@ -173,5 +173,38 @@ struct AreaVisitor { total: f64 }
 impl Visitor for AreaVisitor {
     fn visit_circle(&mut self, c: &Circle) { self.total += std::f64::consts::PI * c.radius * c.radius; }
     fn visit_rect(&mut self, r: &Rectangle) { self.total += r.width * r.height; }
+}
+```
+
+## TypeScript
+
+### Notes
+- Prefer discriminated unions + functions over Visitor class hierarchies for **closed** element sets — exhaustiveness checking is free.
+- `switch` on `element.kind` with `default: element satisfies never` ensures all element types are handled at compile time.
+- For **open** element sets (extensible types), use `element.accept(visitor)` dispatch with a `Visitor` interface to keep elements and operations decoupled.
+- This approach applies cleanly to AST transforms, code analysis tools, schema validators, and domain model traversals.
+
+### Example Structure
+```typescript
+// Closed element set — discriminated union approach (preferred)
+type Shape =
+  | { kind: 'circle'; radius: number }
+  | { kind: 'rect';   width: number; height: number };
+
+// Each "visitor" is a function — no class hierarchy needed
+function area(shape: Shape): number {
+  switch (shape.kind) {
+    case 'circle': return Math.PI * shape.radius ** 2;
+    case 'rect':   return shape.width * shape.height;
+    default:       return shape satisfies never;
+  }
+}
+
+function perimeter(shape: Shape): number {
+  switch (shape.kind) {
+    case 'circle': return 2 * Math.PI * shape.radius;
+    case 'rect':   return 2 * (shape.width + shape.height);
+    default:       return shape satisfies never;
+  }
 }
 ```

@@ -1,7 +1,7 @@
 ---
 name: Chain of Responsibility
 category: behavioral
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - multiple potential handlers for a request
   - handler not known a priori
@@ -177,4 +177,42 @@ impl Handler for AuthHandler {
         if !req.authenticated { Some(Response { status: 401 }) } else { None }
     }
 }
+```
+
+## TypeScript
+
+### Notes
+- Optional chaining for pass-through: `return this.next?.handle(req) ?? null` — no null-guard boilerplate.
+- Structural typing: any object with `handle` and `setNext` satisfies the `Handler` interface without extending a base class.
+- For Express/Koa-style middleware, the pattern is `(req, res, next) => void` — built into the framework routing layer.
+- Async chains: `async handle(req: Request): Promise<Response | null>` and `await this.next?.handle(req)` compose naturally.
+
+### Example Structure
+```typescript
+interface Handler {
+  setNext(h: Handler): Handler;
+  handle(req: Request): Response | null;
+}
+
+abstract class AbstractHandler implements Handler {
+  private next: Handler | null = null;
+  setNext(h: Handler): Handler { this.next = h; return h; }
+  handle(req: Request): Response | null { return this.next?.handle(req) ?? null; }
+}
+
+class AuthHandler extends AbstractHandler {
+  handle(req: Request): Response | null {
+    if (!req.headers.authorization) return { status: 401, body: 'Unauthorized' };
+    return super.handle(req);
+  }
+}
+
+class RateLimitHandler extends AbstractHandler {
+  handle(req: Request): Response | null {
+    if (isRateLimited(req)) return { status: 429, body: 'Too Many Requests' };
+    return super.handle(req);
+  }
+}
+
+// Wiring: auth.setNext(rateLimit).setNext(businessHandler)
 ```

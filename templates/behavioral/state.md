@@ -1,7 +1,7 @@
 ---
 name: State
 category: behavioral
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - object behavior changes based on internal state
   - state machine with multiple transitions
@@ -191,5 +191,37 @@ impl State for ProcessingState {
         println!("Processing -> Idle");
         Box::new(IdleState)
     }
+}
+```
+
+## TypeScript
+
+### Notes
+- Prefer discriminated unions (`type State = 'idle' | 'loading' | 'success' | 'error'`) over class hierarchies for simple, finite state machines.
+- Complex state machines with guards, parallel states, or history: use the `xstate` library.
+- TypeScript `switch` exhaustiveness (`default: state satisfies never`) ensures every state is handled at compile time.
+- For class-based state, structural typing means concrete state classes don't need to `extend` a base — just satisfy the `StateHandler` interface.
+
+### Example Structure
+```typescript
+type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
+
+interface StateHandler {
+  connect(ctx: Connection): void;
+  disconnect(ctx: Connection): void;
+}
+
+const stateHandlers: Record<ConnectionState, StateHandler> = {
+  disconnected: { connect: ctx => ctx.transition('connecting'), disconnect: () => {} },
+  connecting:   { connect: () => {},                           disconnect: ctx => ctx.transition('disconnected') },
+  connected:    { connect: () => {},                           disconnect: ctx => ctx.transition('disconnected') },
+  error:        { connect: ctx => ctx.transition('connecting'), disconnect: ctx => ctx.transition('disconnected') },
+};
+
+class Connection {
+  private state: ConnectionState = 'disconnected';
+  transition(s: ConnectionState): void { this.state = s; }
+  connect():    void { stateHandlers[this.state].connect(this); }
+  disconnect(): void { stateHandlers[this.state].disconnect(this); }
 }
 ```

@@ -1,7 +1,7 @@
 ---
 name: Command
 category: behavioral
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - undo/redo required
   - queue or log operations
@@ -191,4 +191,42 @@ impl<'a> Command for InsertCommand<'a> {
     fn execute(&mut self) { self.editor.insert(&self.text.clone()); }
     fn undo(&mut self)    { self.editor.delete(self.text.len()); }
 }
+```
+
+## TypeScript
+
+### Notes
+- Model commands as plain objects (`{ type: 'TurnOn'; targetId: string }`) for serialization-friendly command buses.
+- Discriminated unions allow exhaustive type-checking of command types in a dispatcher switch statement.
+- Undo/redo: store immutable snapshots in an array rather than implementing `undo()` methods on commands.
+- `async execute(): Promise<void>` is standard; async commands compose naturally with `await queue.run(cmd)`.
+
+### Example Structure
+```typescript
+interface Command { execute(): void; undo(): void; }
+
+class Light {
+  private on = false;
+  turnOn()  { this.on = true; }
+  turnOff() { this.on = false; }
+  isOn()    { return this.on; }
+}
+
+class TurnOnCommand implements Command {
+  constructor(private light: Light) {}
+  execute() { this.light.turnOn(); }
+  undo()    { this.light.turnOff(); }
+}
+
+class CommandQueue {
+  private history: Command[] = [];
+  run(cmd: Command): void { cmd.execute(); this.history.push(cmd); }
+  undo(): void             { this.history.pop()?.undo(); }
+}
+
+// Usage
+const light = new Light();
+const queue = new CommandQueue();
+queue.run(new TurnOnCommand(light)); // on
+queue.undo();                        // off
 ```

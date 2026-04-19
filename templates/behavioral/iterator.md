@@ -1,7 +1,7 @@
 ---
 name: Iterator
 category: behavioral
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - traverse collection without exposing structure
   - multiple simultaneous traversals
@@ -171,4 +171,39 @@ impl Iterator for NumberRange {
     }
 }
 // Usage: for n in NumberRange::new(1, 10) { ... }
+```
+
+## TypeScript
+
+### Notes
+- Implement `Symbol.iterator` and the `Iterable<T>` / `Iterator<T>` interfaces — built into the language; `for...of`, spread, and destructuring all consume them.
+- Generator functions (`function* gen(): Generator<T>`) are the idiomatic factory for custom iterators.
+- Async iterators (`AsyncIterable<T>`) and `for await...of` for streaming or paginated data sources.
+- TypeScript's `IterableIterator<T>` combines both interfaces — generators implement it by default.
+
+### Example Structure
+```typescript
+class NumberRange implements Iterable<number> {
+  constructor(private start: number, private end: number) {}
+
+  [Symbol.iterator](): Iterator<number> {
+    let current = this.start;
+    const end = this.end;
+    return {
+      next(): IteratorResult<number> {
+        return current < end
+          ? { value: current++, done: false }
+          : { value: 0,         done: true  };
+      },
+    };
+  }
+}
+
+// Generator-based (more idiomatic)
+function* range(start: number, end: number): Generator<number> {
+  for (let i = start; i < end; i++) yield i;
+}
+
+for (const n of new NumberRange(1, 4)) console.log(n); // 1, 2, 3
+console.log([...range(1, 4)]);                          // [1, 2, 3]
 ```

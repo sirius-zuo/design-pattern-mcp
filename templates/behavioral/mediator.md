@@ -1,7 +1,7 @@
 ---
 name: Mediator
 category: behavioral
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - many objects communicate in complex ways
   - reduce direct references between objects
@@ -180,4 +180,36 @@ fn run_mediator() {
         while let Ok(event) = rx.recv() { /* route event */ let _ = &btn; }
     });
 }
+```
+
+## TypeScript
+
+### Notes
+- Node.js `EventEmitter` is a natural Mediator for event-based communication between server-side components.
+- For typed events, use `eventemitter3` with a `type Events = { 'user:created': [User] }` type parameter to eliminate stringly-typed event names.
+- React Context API is the idiomatic mediator for UI component communication without prop drilling.
+- NestJS `EventEmitter2` with `@OnEvent('order.placed')` decorators is the idiomatic mediator for NestJS services.
+
+### Example Structure
+```typescript
+import EventEmitter from 'eventemitter3';
+
+type AppEvents = {
+  'order:placed':   [orderId: string, amount: number];
+  'payment:failed': [orderId: string, reason: string];
+};
+
+const bus = new EventEmitter<AppEvents>();
+
+// Publisher
+bus.emit('order:placed', 'order-123', 99.99);
+
+// Subscribers (each component registers independently)
+bus.on('order:placed', (orderId, amount) => {
+  console.log(`New order ${orderId} for $${amount}`);
+});
+
+bus.on('order:placed', (orderId) => {
+  inventoryService.reserve(orderId);
+});
 ```
