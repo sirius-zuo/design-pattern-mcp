@@ -2,7 +2,7 @@
 name: Strategy
 category: behavioral
 aliases: [Policy]
-languages: [go, java, python, rust, generic]
+languages: [go, java, python, rust, typescript, generic]
 triggers:
   - multiple interchangeable algorithms
   - algorithm selection at runtime
@@ -140,5 +140,35 @@ impl<S: Strategy> Context<S> {
 struct DynContext { strategy: Box<dyn Strategy> }
 impl DynContext {
     fn run(&self, params: &Params) -> Result { self.strategy.execute(params) }
+}
+```
+
+## TypeScript
+
+### Notes
+- Define single-method stateless strategies as function types: `type SortStrategy = (data: number[]) => number[]` — no interface or class needed.
+- Multi-method or stateful strategies: use an `interface` with structural typing — no `implements` declaration required.
+- Inject via constructor (`constructor(private strategy: SortStrategy)`) for immutability; use a setter only when runtime switching is required.
+- `Context` holds a field typed to the function type or interface; calling it is `this.strategy(params)` or `this.strategy.execute(params)`.
+
+### Example Structure
+```typescript
+type Sorter = (data: number[]) => number[];
+
+class SortContext {
+  constructor(private strategy: Sorter) {}
+  setStrategy(s: Sorter): void { this.strategy = s; }
+  run(data: number[]): number[] { return this.strategy(data); }
+}
+
+// Usage — any function with the right signature is a valid strategy
+const ctx = new SortContext(data => [...data].sort((a, b) => a - b));
+ctx.run([3, 1, 2]); // [1, 2, 3]
+
+// Interface-based for stateful strategies
+interface PricingStrategy { calculate(basePrice: number): number; }
+class DiscountStrategy implements PricingStrategy {
+  constructor(private pct: number) {}
+  calculate(base: number): number { return base * (1 - this.pct); }
 }
 ```
