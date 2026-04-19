@@ -183,11 +183,11 @@ class DiscountStrategy implements PricingStrategy {
   calculate(base: number): number { return base * (1 - this.pct); }
 }
 ```
-```
 
-Claude then uses this output as grounding constraints when writing your actual payment service code — ensuring the context doesn't embed algorithm logic, strategies are injected via constructor, and the TypeScript-idiomatic function-type approach is used.
 
----
+**Claude then uses this output as grounding constraints when writing your actual payment service code — ensuring the context doesn't embed algorithm logic, strategies are injected via constructor, and the TypeScript-idiomatic function-type approach is used.**
+
+
 
 ## Pattern Coverage
 
