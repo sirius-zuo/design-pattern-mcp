@@ -1,4 +1,4 @@
-# design-pattern-mcp
+# Design-Pattern-MCP
 
 An MCP (Model Context Protocol) server that provides design pattern structural constraints and anti-patterns to AI coding agents. Agents call this server during code generation to ensure they implement patterns correctly.
 
