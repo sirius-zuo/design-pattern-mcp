@@ -15,6 +15,7 @@ function levenshtein(a: string, b: string): number {
 }
 
 function findClosest(input: string, patternIndex: Map<string, PatternEntry>): string {
+  const normalizeKey = (s: string) => s.toLowerCase().replace(/[\s\/\-]+/g, '');
   const seen = new Set<string>();
   let minDist = Infinity;
   let closest = '';
@@ -22,7 +23,7 @@ function findClosest(input: string, patternIndex: Map<string, PatternEntry>): st
     const canonical = entry.frontmatter.name;
     if (seen.has(canonical)) continue;
     seen.add(canonical);
-    const dist = levenshtein(input.toLowerCase(), canonical.toLowerCase());
+    const dist = levenshtein(normalizeKey(input), normalizeKey(canonical));
     if (dist < minDist) { minDist = dist; closest = canonical; }
   }
   return closest;
@@ -59,7 +60,7 @@ export function getTemplate(
   return {
     template: {
       pattern: entry.frontmatter.name,
-      language: lang === 'generic' ? 'Generic' : language,
+      language: lang === 'generic' ? 'Generic' : lang,
       components: entry.components,
       constraints: entry.constraints,
       antiPatterns: entry.antiPatterns,
